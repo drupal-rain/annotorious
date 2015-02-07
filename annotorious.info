@@ -1,0 +1,6 @@
+name = Annotorious
+description = Integrate with annotorious.js.
+core = 7.x
+dependencies[] = libraries
+
+version = 7.x-1.x

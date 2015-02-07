@@ -1,0 +1,7 @@
+name = Annotorious image
+description = Integrate with annotorious.js.
+core = 7.x
+dependencies[] = annotorious
+dependencies[] = image
+
+version = 7.x-1.x

@@ -1,0 +1,52 @@
+<?php
+
+/**
+ * Implements hook_libraries_info().
+ */
+function annotorious_libraries_info() {
+  $libraries['annotorious'] = array(
+    'name' => 'Annotorious',
+    'vendor url' => 'http://annotorious.github.io/',
+    'download url' => 'https://github.com/annotorious/annotorious/releases/download/v0.6.3/annotorious-0.6.3.zip',
+    'version callback' => 'annotorious_version_callback',
+    'files' => array(
+      'css' => array('css/annotorious.css'),
+      'js' => array('annotorious.min.js'),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
+ * Pseudo version callback.
+ */
+function annotorious_version_callback() {
+  return TRUE;
+}
+
+/**
+ * Implements hook_requirements()
+ */
+function annotorious_requirements($phase) {
+  $requirements = array();
+  if ($phase == 'runtime') {
+    $t = get_t();
+    if ($path = libraries_get_path('annotorious')) {
+      if (file_exists($path . '/annotorious.min.js')) {
+        $requirements['annotorious'] = array(
+          'title' => $t('Annotorious'),
+          'value' => $t('annotorious.min.js found under !path', array('!path' => $path . '/annotorious.min.js')),
+          'severity' => REQUIREMENT_OK,
+        );
+        return $requirements;
+      }
+    }
+    $requirements['annotorious'] = array(
+      'title' => $t('Annotorious'),
+      'value' => isset($lib['error message']) ? $t($lib['error message']) : t('Annotorious library was not found. !download the library and place in under sites/all/libraries/annotorious, so that the library can be found at sites/all/libraries/annotorious/annotorious.min.js.', array('!download' => l(t('Download'), 'http://annotorious.github.io/'))),
+      'severity' => REQUIREMENT_ERROR,
+    );
+  }
+  return $requirements;
+}
