@@ -2,6 +2,10 @@ name = Annotorious image
 description = Integrate with annotorious.js.
 core = 7.x
 dependencies[] = annotorious
+dependencies[] = ctools
 dependencies[] = image
+
+stylesheets[all][] = annotorious_image.css
+scripts[] = annotorious_image.js
 
 version = 7.x-1.x

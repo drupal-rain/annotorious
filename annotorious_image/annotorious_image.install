@@ -4,9 +4,16 @@
  * Implements hook_schema().
  */
 function annotorious_image_schema() {
+  // @todo Support entity field revision?
   $schema['annotorious_image'] = array(
     'description' => 'The table to store image field item annotation data.',
     'fields' => array(
+      'aid' => array(
+        'description' => 'The primary identifier.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
       'entity_type' => array(
         'type' => 'varchar',
         'length' => 32,
@@ -14,52 +21,43 @@ function annotorious_image_schema() {
         'default' => '',
         'description' => 'The entity type this data is attached to.',
       ),
-      'bundle' => array(
-        'type' => 'varchar',
-        'length' => 128,
-        'not null' => TRUE,
-        'default' => '',
-        'description' => 'The field instance bundle to which this row belongs, used when deleting a field instance.',
-      ),
       'entity_id' => array(
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'description' => 'The entity id this data is attached to.',
       ),
+      /*
       'revision_id' => array(
+        'description' => 'The entity revision id this data is attached to, or NULL if the entity type is not versioned.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => FALSE,
-        'description' => 'The entity revision id this data is attached to, or NULL if the entity type is not versioned.',
       ),
+      */
       'field_name' => array(
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
         'description' => 'The field this data is attached to.',
-      ),
-      'language' => array(
         'type' => 'varchar',
         'length' => 32,
         'not null' => TRUE,
         'default' => '',
-        'description' => 'The language for this data item.',
       ),
-      'delta' => array(
+      'fid' => array(
+        'description' => 'The file fid to match the correct field item.',
         'type' => 'int',
+        'not null' => FALSE,
         'unsigned' => TRUE,
-        'not null' => TRUE,
-        'description' => 'The sequence number for this data item, used for multi-value fields.',
       ),
+      /*
       'data' => array(
+        'description' => 'The actual data.',
         'type' => 'blob',
         'size' => 'big',
-        'not null' => TRUE,
         'serialize' => TRUE,
-        'description' => 'The actual data.',
+        'not null' => FALSE,
       ),
+      */
+      /*
       'deleted' => array(
         'type' => 'int',
         'size' => 'tiny',
@@ -67,16 +65,99 @@ function annotorious_image_schema() {
         'default' => 0,
         'description' => 'A boolean indicating whether this data item has been deleted. Used to mass delete when delete the field, bundle, entity type.',
       ),
+      */
     ),
-    'primary key' => array('entity_type', 'entity_id', 'field_name', 'delta', 'language'),
+    //'primary key' => array('entity_type', 'entity_id', 'revision_id', 'field_name', 'fid'),
+    //'primary key' => array('entity_type', 'entity_id', 'field_name', 'fid'),
+    'primary key' => array('aid'),
+    'unique keys' => array(
+      'field_image' => array('entity_type', 'entity_id', 'field_name', 'fid'),
+    ),
     'indexes' => array(
       'entity_type' => array('entity_type'),
-      'bundle' => array('bundle'),
       'entity_id' => array('entity_id'),
-      'revision_id' => array('revision_id'),
+      //'revision_id' => array('revision_id'),
       'field_name' => array('field_name'),
-      'language' => array('language'),
+      'fid' => array('fid'),
+      //'deleted' => array('deleted'),
+    ),
+    'foreign keys' => array(
+      'fid' => array(
+        'table' => 'file_managed',
+        'columns' => array('fid' => 'fid'),
+      ),
+    ),
+  );
+
+  $schema['annotorious_image_annotation'] = array(
+    'description' => 'The table to store annotorious image annotation item.',
+    'fields' => array(
+      'anid' => array(
+        'description' => 'The primary identifier.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'aid' => array(
+        'description' => 'The file fid to match the correct field item.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
+      /*
+      'src' => array(
+        'description' => 'Annotation src property.',
+        'type' => 'varchar',
+        'length' => 2048,
+        'not null' => FALSE,
+      ),
+      */
+      'url' => array(
+        'description' => 'The data-original identity for the img tag.',
+        'type' => 'varchar',
+        'length' => 2048,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'uid' => array(
+        'description' => "User's {users}.uid, owner of this annotation.",
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'text' => array(
+        'description' => 'Annotation text',
+        'type' => 'text',
+        'size' => 'small',
+        'not null' => FALSE,
+      ),
+      'shapes' => array(
+        'description' => 'The serialized shapes.',
+        'type' => 'blob',
+        'size' => 'normal',
+        'serialize' => TRUE,
+        'not null' => FALSE,
+      ),
+      'deleted' => array(
+        'description' => 'A boolean indicating whether this item has been deleted.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('anid'),
+    'indexes' => array(
+      'aid' => array('aid'),
+      'uid' => array('uid'),
+      'url' => array('url'), // Consider adding this if need to query by it.
       'deleted' => array('deleted'),
+    ),
+    'foreign keys' => array(
+      'aid' => array(
+        'table' => 'annotorious_image',
+        'columns' => array('aid' => 'aid'),
+      ),
     ),
   );
 

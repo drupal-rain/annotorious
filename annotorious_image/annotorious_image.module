@@ -1,3 +1,323 @@
 <?php
 
+/**
+ * @file Annotorious image module.
+ */
 
+// =============================================================================
+// Core Function
+
+// -----------------------------------------------------------------------------
+// Menu
+
+/**
+ * Implements hook_menu().
+ */
+function annotorious_image_menu() {
+  $items['annotorious-image/save'] = array(
+    'title' => 'Annotorious image data save',
+    'description' => 'Save annotorious image data.',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'annotorious_image_menu_save',
+    'page arguments' => array(),
+    'access callback' => TRUE,
+  );
+  $items['annotorious-image/load'] = array(
+    'title' => 'Annotorious image data load',
+    'description' => 'Load annotorious image data.',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'annotorious_image_menu_load',
+    'page arguments' => array(),
+    'access callback' => TRUE,
+  );
+
+  return $items;
+}
+
+/**
+ * Menu callback to save data.
+ *
+ * @important Be ware of volnerable attack.
+ */
+function annotorious_image_menu_save() {
+  $url = $_POST['url'];
+  $annotations = $_POST['annotations'];
+  list($entity_type, $entity_id, $field_name, $fid) = explode('-', $url);
+  $entity = entity_load_single($entity_type, $entity_id);
+  $anno_aid = annotorious_image_anno_load($entity_type, $entity, $field_name, $fid);
+  if (!is_null($anno_aid)) {
+    array_walk($annotations, '_annotorious_image_menu_save');
+    // Check delete before save, to ease the insert process.
+    annotorious_image_annotation_check_delete($anno_aid, $annotations);
+    foreach ($annotations as $annotation) {
+      if (!isset($annotation->aid)) {
+        $annotation->aid = $anno_aid;
+      }
+      annotorious_image_annotation_save($annotation);
+    }
+  }
+}
+
+function _annotorious_image_menu_save(&$annotation, $key) {
+  $annotation = (object) $annotation;
+}
+
+/**
+ * Menu callback to load data.
+ */
+function annotorious_image_menu_load() {
+  dpm($_GET);
+}
+
+// -----------------------------------------------------------------------------
+// Utility
+
+/**
+ * Get annotorious item(s).
+ */
+function annotorious_image_anno_load($entity_type, $entity, $field_name, $fid) {
+  list($entity_id, , ) = entity_extract_ids($entity_type, $entity);
+  $arguments = array(
+    ':entity_type' => $entity_type,
+    ':entity_id' => $entity_id,
+    ':field_name' => $field_name,
+    ':fid' => $fid,
+  );
+  $result = db_select('annotorious_image')
+    ->fields('annotorious_image', array('aid'))
+    ->where('entity_type = :entity_type AND entity_id = :entity_id AND field_name = :field_name AND fid = :fid', $arguments)
+    ->execute();
+
+  return $result->fetchField();
+}
+
+/**
+ * Get all annotorious items belong to the entity.
+ */
+function annotorious_image_anno_load_all($entity_type, $entity) {
+  list($entity_id, , ) = entity_extract_ids($entity_type, $entity);
+  $arguments = array(
+    ':entity_type' => $entity_type,
+    ':entity_id' => $entity_id,
+  );
+  $result = db_select('annotorious_image')
+    ->fields('annotorious_image')
+    ->where('entity_type = :entity_type AND entity_id = :entity_id', $arguments)
+    ->execute();
+
+  return $result->fetchAll();
+}
+
+/**
+ * Load all annotations belong to an entity.
+ */
+function annotorious_image_anno_load_all_annotations($entity_type, $entity) {
+  $anno_items = annotorious_image_anno_load_all($entity_type, $entity);
+  $annotations = array();
+  foreach ($anno_items as $anno) {
+    $annotations += annotorious_image_annotation_load_by_anno($anno->aid);
+  }
+
+  return  $annotations;
+}
+
+/**
+ * Update annorious data, the annotorious item is not meant to be update.
+ *
+ * @param $aid
+ * @param $data
+ *   'annotations'
+ */
+function annotorious_image_anno_save($anno, $data = NULL) {
+  // New, insert
+  if (!isset($anno->aid) || is_null($anno->aid)) {
+    db_insert('annotorious_image')->fields(array(
+      'entity_type' => $anno->entity_type,
+      'entity_id' => $anno->entity_id,
+      'field_name' => $anno->field_name,
+      'fid' => $anno->fid,
+    ))->execute();
+    if (isset($data['annotations'])) {
+      foreach ($data['annotations'] as $annotation) {
+        annotorious_image_annotation_save($annotation);
+      }
+    }
+  }
+  // Save annotations data
+  if (isset($data['annotations'])) {
+    foreach ($data['annotations'] as $annotation) {
+      annotorious_image_annotation_save($annotation);
+    }
+  }
+}
+
+/**
+ * @param stdClass $annotation
+ */
+function annotorious_image_annotation_save($annotation) {
+  // New, insert
+  if (!isset($annotation->anid) || is_null($annotation->anid)) {
+    global $user;
+    db_insert('annotorious_image_annotation')->fields(array(
+      'aid' => $annotation->aid,
+      'url' => isset($annotation->url) ? $annotation->url : $annotation->src,
+      'uid' => isset($annotation->uid) ? $annotation->uid : $user->uid,
+      'text' => $annotation->text,
+      'shapes' => serialize($annotation->shapes),
+    ))->execute();
+  }
+  // Update
+  else {
+    db_update('annotorious_image_annotation')
+      ->fields(array('text' => $annotation->text))
+      ->condition('anid', $annotation->anid)
+      ->execute();
+  }
+}
+
+function annotorious_image_annotation_load($anid) {
+  $result = db_select('annotorious_image_annotation')
+    ->fields('annotorious_image_annotation')
+    ->where('anid = :anid', array(':anid' => $anid))
+    ->execute();
+  $annotation = $result->fetch();
+  _annotorious_image_annotation($annotation, NULL);
+
+  return $annotation;
+}
+
+/**
+ * @param $aid
+ * @return mixed Array of Annotations keyed by anid.
+ */
+function annotorious_image_annotation_load_by_anno($aid, $include_deleted = FALSE) {
+  $query = db_select('annotorious_image_annotation')
+    ->fields('annotorious_image_annotation')
+    ->condition('aid', $aid);
+  if (!$include_deleted) {
+    $query->condition('deleted', $include_deleted);
+  }
+  $result = $query->execute();
+  $annotations = $result->fetchAllAssoc('anid');
+  array_walk($annotations, '_annotorious_image_annotation');
+
+  return $annotations;
+}
+
+/**
+ * Callback to unserialize() $annotation->shapes.
+ */
+function _annotorious_image_annotation(&$annotation, $key) {
+  $annotation->shapes = unserialize($annotation->shapes);
+}
+
+function annotorious_image_annotation_delete($anid) {
+  db_update('annotorious_image_annotation')
+    ->fields(array('deleted' => TRUE))
+    ->condition('anid', $anid)
+    ->execute();
+}
+
+/**
+ * Compare the db annotations and the going to save
+ */
+function annotorious_image_annotation_check_delete($aid, $annotations) {
+  $annotations_db = annotorious_image_annotation_load_by_anno($aid);
+  $keys_old = array_keys($annotations_db);
+  $keys_now = array();
+  foreach ($annotations as $annotation) {
+    if (isset($annotation->anid)) {
+      $keys_now[] = $annotation->anid;
+    }
+  }
+  $keys_deleted = array_diff($keys_old, $keys_now);
+  foreach ($keys_deleted as $anid) {
+    annotorious_image_annotation_delete($anid);
+  }
+}
+
+/**
+ * Load all annotorious active fields of an entity bundle.
+ */
+function annotorious_image_fields_load($entity_type, $bundle_name) {
+  // Use a static cache 'annotorious_image_fields'.
+  $fields = &drupal_static('annotorious_image_fields', array());
+
+  if (!isset($fields[$entity_type])) {
+    $fields[$entity_type] = array();
+  }
+  if (!isset($fields[$entity_type][$bundle_name])) {
+    $fields[$entity_type][$bundle_name] = array();
+    $instances = field_info_instances($entity_type, $bundle_name);
+    foreach ($instances as $field_name => $instance) {
+      if (isset($instance['annotorious']) && $instance['annotorious']['on']) {
+        $fields[$entity_type][$bundle_name][] = $field_name;
+      }
+    }
+  }
+
+  return $fields[$entity_type][$bundle_name];
+}
+
+// =============================================================================
+// Integrate to Field System
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function annotorious_image_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+  $field = $form['#field'];
+  $instance = $form['#instance'];
+
+  // Only for 'image' field.
+  if ($field['type'] == 'image') {
+    $annotorious = isset($instance['annotorious']) ? $instance['annotorious'] : array();
+    $form['instance']['annotorious']['on'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Turn on image annotation'),
+      '#default_value' => isset($annotorious['on']) ? $annotorious['on'] : FALSE,
+      '#weight' => 100,
+    );
+  }
+}
+
+/**
+ * Implements hook_field_attach_view_alter().
+ */
+function annotorious_image_field_attach_view_alter(&$output, $context) {
+  // $entity_type, $entity, $view_mode, $display, $language.
+  extract($context);
+  list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+
+  // Attach all Annotations
+  $annotations = annotorious_image_anno_load_all_annotations($entity_type, $entity);
+  // @issue Potential issue.
+  $settings = array(
+    'annotations' => $annotations,
+  );
+  drupal_add_js(array('annotoriousImage' => $settings), 'setting');
+
+  // Add to annotorious active fields
+  $fields = annotorious_image_fields_load($entity_type, $bundle);
+  foreach ($fields as $field_name) {
+    // Only support 'image' formatter for now
+    // @todo Support more.
+    $instance = field_info_instance($entity_type, $field_name, $bundle);
+    $formatter = isset($instance['display'][$view_mode]) ? $instance['display'][$view_mode] : $instance['display']['default'];
+    if ($formatter['type'] == 'image') {
+      $children = element_children($output[$field_name]);
+      foreach ($children as $key) {
+        $fid = $output[$field_name][$key]['#item']['fid'];
+        // The unique id for annotorious in order to support when image with the same image src.
+        //$data_original = $entity_type . '-' . $id . '-' . $vid . '-' . $field_name . '-' . $fid;
+        $data_original = $entity_type . '-' . $id . '-' . $field_name . '-' . $fid;
+        $output[$field_name][$key]['#item']['attributes'] = array(
+          'class' => array('annotatable annotorious-image'),
+          'data-original' => $data_original,
+        );
+        // @todo Really this way?
+        $output[$field_name][$key]['#attached']['libraries_load'][] = array('annotorious');
+      }
+    }
+  }
+}
