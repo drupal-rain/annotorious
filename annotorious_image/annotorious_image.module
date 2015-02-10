@@ -49,18 +49,17 @@ function annotorious_image_menu_save() {
   $annotations = $_POST['annotations'];
   list($entity_type, $entity_id, $field_name, $fid) = explode('-', $url);
   $entity = entity_load_single($entity_type, $entity_id);
-  $anno_aid = annotorious_image_anno_load($entity_type, $entity, $field_name, $fid);
-  if (!is_null($anno_aid)) {
-    array_walk($annotations, '_annotorious_image_menu_save');
-    // Check delete before save, to ease the insert process.
-    annotorious_image_annotation_check_delete($anno_aid, $annotations);
-    foreach ($annotations as $annotation) {
-      if (!isset($annotation->aid)) {
-        $annotation->aid = $anno_aid;
-      }
-      annotorious_image_annotation_save($annotation);
-    }
+  $anno = annotorious_image_anno_load($entity_type, $entity, $field_name, $fid);
+  // Save new one first
+  if (is_null($anno)) {
+    $anno = new stdClass();
+    $anno->entity_type = $entity_type;
+    $anno->entity_id = $entity_id;
+    $anno->field_name = $field_name;
+    $anno->fid = $fid;
   }
+  array_walk($annotations, '_annotorious_image_menu_save');
+  annotorious_image_anno_save($anno, array('annotations' => $annotations));
 }
 
 /**
@@ -107,7 +106,7 @@ function annotorious_image_anno_load($entity_type, $entity, $field_name, $fid) {
     ->where('entity_type = :entity_type AND entity_id = :entity_id AND field_name = :field_name AND fid = :fid', $arguments)
     ->execute();
 
-  return $result->fetchField();
+  return $result->fetchObject();
 }
 
 /**
@@ -150,21 +149,24 @@ function annotorious_image_anno_load_all_annotations($entity_type, $entity) {
 function annotorious_image_anno_save($anno, $data = NULL) {
   // New, insert
   if (!isset($anno->aid) || is_null($anno->aid)) {
-    db_insert('annotorious_image')->fields(array(
+    $aid = db_insert('annotorious_image')->fields(array(
       'entity_type' => $anno->entity_type,
       'entity_id' => $anno->entity_id,
       'field_name' => $anno->field_name,
       'fid' => $anno->fid,
     ))->execute();
-    if (isset($data['annotations'])) {
-      foreach ($data['annotations'] as $annotation) {
-        annotorious_image_annotation_save($annotation);
-      }
-    }
+  }
+  else {
+    $aid = $anno->aid;
   }
   // Save annotations data
-  if (isset($data['annotations'])) {
+  if ($aid && isset($data['annotations'])) {
+    // Check delete before save, to ease the insert process.
+    annotorious_image_annotation_check_delete($aid, $data['annotations']);
     foreach ($data['annotations'] as $annotation) {
+      if (!isset($annotation->aid)) {
+        $annotation->aid = $aid;
+      }
       annotorious_image_annotation_save($annotation);
     }
   }

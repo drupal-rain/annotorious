@@ -17,10 +17,11 @@ Drupal.annotoriousImage = Drupal.annotoriousImage || {};
           val.editable = false;
           anno.addAnnotation(val);
         });
-      }
-      // Widget
-      if (Drupal.settings.annotoriousImage.permission) {
-        $('.annotorious-annotationlayer').hover(Drupal.annotoriousImage.widgetHoverIn, Drupal.annotoriousImage.widgetHoverOut);
+
+        // Widget
+        if (Drupal.settings.annotoriousImage.permission) {
+          $('.annotorious-annotationlayer').hover(Drupal.annotoriousImage.widgetHoverIn, Drupal.annotoriousImage.widgetHoverOut);
+        }
       }
     }
   };
