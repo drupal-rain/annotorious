@@ -8,7 +8,7 @@
 // Core Function
 
 // -----------------------------------------------------------------------------
-// Menu
+// Menu, Permission
 
 /**
  * Implements hook_menu().
@@ -40,6 +40,11 @@ function annotorious_image_menu() {
  * @important Be ware of volnerable attack.
  */
 function annotorious_image_menu_save() {
+  // Check permission first.
+  if (!user_access('annotorious_image_edit')) {
+    return;
+  }
+
   $url = $_POST['url'];
   $annotations = $_POST['annotations'];
   list($entity_type, $entity_id, $field_name, $fid) = explode('-', $url);
@@ -58,6 +63,9 @@ function annotorious_image_menu_save() {
   }
 }
 
+/**
+ * Callback for array_walk to turn item from array into object.
+ */
 function _annotorious_image_menu_save(&$annotation, $key) {
   $annotation = (object) $annotation;
 }
@@ -67,6 +75,17 @@ function _annotorious_image_menu_save(&$annotation, $key) {
  */
 function annotorious_image_menu_load() {
   dpm($_GET);
+}
+
+/**
+ * Implements hook_permission().
+ */
+function annotorious_image_permission() {
+  return array(
+    'annotorious_image_edit' => array(
+      'title' => t('Edit Annotorious image'),
+    ),
+  );
 }
 
 // -----------------------------------------------------------------------------
@@ -291,8 +310,16 @@ function annotorious_image_field_attach_view_alter(&$output, $context) {
 
   // Attach all Annotations
   $annotations = annotorious_image_anno_load_all_annotations($entity_type, $entity);
+  $urls = array();
+  foreach ($annotations as $annotation) {
+    if (!in_array($annotation->url, $urls)) {
+      $urls[] = $annotation->url;
+    }
+  }
   // @issue Potential issue.
   $settings = array(
+    'permission' => user_access('annotorious_image_edit'),
+    'urls' => $urls,
     'annotations' => $annotations,
   );
   drupal_add_js(array('annotoriousImage' => $settings), 'setting');
@@ -312,7 +339,7 @@ function annotorious_image_field_attach_view_alter(&$output, $context) {
         //$data_original = $entity_type . '-' . $id . '-' . $vid . '-' . $field_name . '-' . $fid;
         $data_original = $entity_type . '-' . $id . '-' . $field_name . '-' . $fid;
         $output[$field_name][$key]['#item']['attributes'] = array(
-          'class' => array('annotatable annotorious-image'),
+          'class' => array('annotorious-image'),
           'data-original' => $data_original,
         );
         // @todo Really this way?
