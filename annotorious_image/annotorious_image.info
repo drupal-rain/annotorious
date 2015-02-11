@@ -6,6 +6,5 @@ dependencies[] = ctools
 dependencies[] = image
 
 stylesheets[all][] = annotorious_image.css
-scripts[] = annotorious_image.js
 
 version = 7.x-1.x

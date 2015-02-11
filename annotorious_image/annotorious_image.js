@@ -5,31 +5,37 @@ Drupal.annotoriousImage = Drupal.annotoriousImage || {};
 
   Drupal.behaviors.annotoriousImage = {
     attach: function (context, settings) {
-      if (typeof Drupal.settings.annotoriousImage == 'object') {
-        // Make it annotatable
-        $('.annotorious-image').each(function() {
+      // Action: 'annotorious-image'
+      $('.annotorious-image', context).once('annotorious-image', function() {
+        // Make it annotatable, Use .on('load') to avoid issue on Chrome.
+        $(this).on('load', function() {
           var url = $(this).attr('data-original');
           anno.makeAnnotatable($(this)[0]);
           anno.hideSelectionWidget(url);
         });
-        // Add annotations
-        $.each(Drupal.settings.annotoriousImage.annotations, function(i, val) {
-          val.editable = false;
-          anno.addAnnotation(val);
+      });
+      // Action: 'annotorious-image-last'
+      $('.annotorious-image', context).last().once('annotorious-image-last', function() {
+        // Only do when the last got loaded.
+        $(this).on('load', function() {
+          // Add annotations
+          $.each(Drupal.settings.annotoriousImage.annotations, function(i, val) {
+            val.editable = false;
+            anno.addAnnotation(val);
+          });
+          // Widget
+          if (Drupal.settings.annotoriousImage.permission) {
+            $('.annotorious-annotationlayer').hover(Drupal.annotoriousImage.widgetHoverIn, Drupal.annotoriousImage.widgetHoverOut);
+          }
         });
-
-        // Widget
-        if (Drupal.settings.annotoriousImage.permission) {
-          $('.annotorious-annotationlayer').hover(Drupal.annotoriousImage.widgetHoverIn, Drupal.annotoriousImage.widgetHoverOut);
-        }
-      }
+      });
     }
   };
 
   Drupal.annotoriousImage.widgetHoverIn = function(event) {
     $(this).append(Drupal.theme('annotoriousImageWidget'));
-    $('.annotorious-image-widget a.save').bind('click', Drupal.annotoriousImage.annoSave);
-    $('.annotorious-image-widget a.edit').bind('click', Drupal.annotoriousImage.annoEdit);
+    $('.annotorious-image-widget a.save').on('click', Drupal.annotoriousImage.annoSave);
+    $('.annotorious-image-widget a.edit').on('click', Drupal.annotoriousImage.annoEdit);
   };
 
   Drupal.annotoriousImage.widgetHoverOut = function(event) {

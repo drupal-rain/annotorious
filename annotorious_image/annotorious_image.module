@@ -7,6 +7,16 @@
 // =============================================================================
 // Core Function
 
+/**
+ * Implements hook_libraries_info_alter().
+ */
+function annotorious_image_libraries_info_alter(&$libraries) {
+  $files = array(
+    'js' => array('annotorious_image.js'),
+  );
+  $libraries['annotorious']['integration files']['annotorious_image'] = $files;
+}
+
 // -----------------------------------------------------------------------------
 // Menu, Permission
 
