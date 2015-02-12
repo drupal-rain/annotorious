@@ -6,34 +6,28 @@ Drupal.annotoriousImage = Drupal.annotoriousImage || {};
   Drupal.behaviors.annotoriousImage = {
     attach: function (context, settings) {
 
-      // Action: 'annotorious-image'
-      $('.annotorious-image', context).once('annotorious-image', function() {
-        // Make it annotatable, Use .on('load') to avoid issue on Chrome.
-        $(this).one('load', function() {
-          var url = $(this).attr('data-original');
-          anno.makeAnnotatable($(this)[0]);
-          anno.hideSelectionWidget(url);
-        }).each(function() {
-          if(this.complete) $(this).load();
-        });
+      // Make it annotatable, Use .on('load') to avoid issue on Chrome.
+      $('.annotorious-image').one('load', function() {
+        var url = $(this).attr('data-original');
+        anno.makeAnnotatable($(this)[0]);
+        anno.hideSelectionWidget(url);
+      }).each(function() {
+        if(this.complete) $(this).load();
       });
 
-      // Action: 'annotorious-image-last'
-      $('.annotorious-image', context).last().once('annotorious-image-last', function() {
-        // Only do when the last got loaded.
-        $(this).one('load', function() {
-          // Add annotations
-          $.each(Drupal.settings.annotoriousImage.annotations, function(i, val) {
-            val.editable = false;
-            anno.addAnnotation(val);
-          });
-          // Widget
-          if (Drupal.settings.annotoriousImage.permission) {
-            $('.annotorious-annotationlayer').hover(Drupal.annotoriousImage.widgetHoverIn, Drupal.annotoriousImage.widgetHoverOut);
-          }
-        }).each(function() {
-          if(this.complete) $(this).load();
+      // Only do when the last got loaded.
+      $('.annotorious-image').last().one('load', function() {
+        // Add annotations
+        $.each(Drupal.settings.annotoriousImage.annotations, function(i, val) {
+          val.editable = false;
+          anno.addAnnotation(val);
         });
+        // Widget
+        if (Drupal.settings.annotoriousImage.permission) {
+          $('.annotorious-annotationlayer').hover(Drupal.annotoriousImage.widgetHoverIn, Drupal.annotoriousImage.widgetHoverOut);
+        }
+      }).each(function() {
+        if(this.complete) $(this).load();
       });
 
     }
