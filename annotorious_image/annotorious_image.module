@@ -61,7 +61,7 @@ function annotorious_image_menu_save() {
   $entity = entity_load_single($entity_type, $entity_id);
   $anno = annotorious_image_anno_load($entity_type, $entity, $field_name, $fid);
   // Save new one first
-  if (is_null($anno)) {
+  if ($anno === FALSE) {
     $anno = new stdClass();
     $anno->entity_type = $entity_type;
     $anno->entity_id = $entity_id;
@@ -76,7 +76,7 @@ function annotorious_image_menu_save() {
  * Callback for array_walk to turn item from array into object.
  */
 function _annotorious_image_menu_save(&$annotation, $key) {
-  $annotation = (object) $annotation;
+  $annotation = (object)$annotation;
 }
 
 /**
@@ -336,26 +336,36 @@ function annotorious_image_field_attach_view_alter(&$output, $context) {
   );
   drupal_add_js(array('annotoriousImage' => $settings), 'setting');
 
+  /*
+  if ($context['view_mode'] == '_custom') {
+    dpm($output);
+  }
+  */
+
   // Add to annotorious active fields
   $fields = annotorious_image_fields_load($entity_type, $bundle);
   foreach ($fields as $field_name) {
     // Only support 'image' formatter for now
     // @todo Support more.
+    // @todo When $context['view_mode'] == 'custom', $context['display'] has full settings
     $instance = field_info_instance($entity_type, $field_name, $bundle);
     $formatter = isset($instance['display'][$view_mode]) ? $instance['display'][$view_mode] : $instance['display']['default'];
     if ($formatter['type'] == 'image') {
-      $children = element_children($output[$field_name]);
-      foreach ($children as $key) {
-        $fid = $output[$field_name][$key]['#item']['fid'];
-        // The unique id for annotorious in order to support when image with the same image src.
-        //$data_original = $entity_type . '-' . $id . '-' . $vid . '-' . $field_name . '-' . $fid;
-        $data_original = $entity_type . '-' . $id . '-' . $field_name . '-' . $fid;
-        $output[$field_name][$key]['#item']['attributes'] = array(
-          'class' => array('annotorious-image'),
-          'data-original' => $data_original,
-        );
-        // @todo Really this way?
-        $output[$field_name][$key]['#attached']['libraries_load'][] = array('annotorious');
+      $content = isset($output[$field_name]) ? $output[$field_name] : NULL;
+      if (!empty($content)) {
+        $children = element_children($content);
+        foreach ($children as $key) {
+          $fid = $output[$field_name][$key]['#item']['fid'];
+          // The unique id for annotorious in order to support when image with the same image src.
+          //$data_original = $entity_type . '-' . $id . '-' . $vid . '-' . $field_name . '-' . $fid;
+          $data_original = $entity_type . '-' . $id . '-' . $field_name . '-' . $fid;
+          $output[$field_name][$key]['#item']['attributes'] = array(
+            'class' => array('annotorious-image'),
+            'data-original' => $data_original,
+          );
+          // @todo Really this way?
+          $output[$field_name][$key]['#attached']['libraries_load'][] = array('annotorious');
+        }
       }
     }
   }

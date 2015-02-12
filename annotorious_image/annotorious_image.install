@@ -57,7 +57,6 @@ function annotorious_image_schema() {
         'not null' => FALSE,
       ),
       */
-      /*
       'deleted' => array(
         'type' => 'int',
         'size' => 'tiny',
@@ -65,7 +64,6 @@ function annotorious_image_schema() {
         'default' => 0,
         'description' => 'A boolean indicating whether this data item has been deleted. Used to mass delete when delete the field, bundle, entity type.',
       ),
-      */
     ),
     //'primary key' => array('entity_type', 'entity_id', 'revision_id', 'field_name', 'fid'),
     //'primary key' => array('entity_type', 'entity_id', 'field_name', 'fid'),
@@ -79,7 +77,7 @@ function annotorious_image_schema() {
       //'revision_id' => array('revision_id'),
       'field_name' => array('field_name'),
       'fid' => array('fid'),
-      //'deleted' => array('deleted'),
+      'deleted' => array('deleted'),
     ),
     'foreign keys' => array(
       'fid' => array(
@@ -134,7 +132,7 @@ function annotorious_image_schema() {
       'shapes' => array(
         'description' => 'The serialized shapes.',
         'type' => 'blob',
-        'size' => 'normal',
+        'size' => 'big',
         'serialize' => TRUE,
         'not null' => FALSE,
       ),
