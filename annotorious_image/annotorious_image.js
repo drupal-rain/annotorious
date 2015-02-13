@@ -6,6 +6,14 @@ Drupal.annotoriousImage = Drupal.annotoriousImage || {};
   Drupal.behaviors.annotoriousImage = {
     attach: function (context, settings) {
 
+      $.each(Drupal.settings.annotoriousImage.fields, function(field_name, data) {
+        // Turn '_' into '-'
+        $('.' + field_name.replace(/_/g, '-') + ' img').each(function(){
+          $(this).addClass('annotorious-image');
+          $(this).attr('data-original', data[$(this).attr('src')]);
+        });
+      });
+
       // Make it annotatable, Use .on('load') to avoid issue on Chrome.
       $('.annotorious-image').one('load', function() {
         var url = $(this).attr('data-original');

@@ -11,6 +11,7 @@
  * Implements hook_libraries_info_alter().
  */
 function annotorious_image_libraries_info_alter(&$libraries) {
+  // Add as library integration
   $files = array(
     'js' => array('annotorious_image.js'),
   );
@@ -291,7 +292,7 @@ function annotorious_image_fields_load($entity_type, $bundle_name) {
 }
 
 // =============================================================================
-// Integrate to Field System
+// Integrate to Entity, Field System
 
 /**
  * Implements hook_form_BASE_FORM_ID_alter().
@@ -313,60 +314,41 @@ function annotorious_image_form_field_ui_field_edit_form_alter(&$form, &$form_st
 }
 
 /**
- * Implements hook_field_attach_view_alter().
+ * Implements hook_entity_view().
  */
-function annotorious_image_field_attach_view_alter(&$output, $context) {
-  // $entity_type, $entity, $view_mode, $display, $language.
-  extract($context);
+function annotorious_image_entity_view($entity, $entity_type, $view_mode, $langcode) {
+  $processed = &drupal_static(__FUNCTION__, array());
   list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
-
-  // Attach all Annotations
-  $annotations = annotorious_image_anno_load_all_annotations($entity_type, $entity);
-  $urls = array();
-  foreach ($annotations as $annotation) {
-    if (!in_array($annotation->url, $urls)) {
-      $urls[] = $annotation->url;
-    }
+  if (isset($processed[$entity_type]) && isset($processed[$entity_type][$bundle])) {
+    return;
   }
-  // @issue Potential issue.
-  $settings = array(
-    'permission' => user_access('annotorious_image_edit'),
-    'urls' => $urls,
-    'annotations' => $annotations,
-  );
-  drupal_add_js(array('annotoriousImage' => $settings), 'setting');
+  $processed[$entity_type][$bundle] = FALSE;
 
-  /*
-  if ($context['view_mode'] == '_custom') {
-    dpm($output);
-  }
-  */
-
-  // Add to annotorious active fields
+  // Load all the fields in of this entity bundle to see if there are support annotorious image.
   $fields = annotorious_image_fields_load($entity_type, $bundle);
-  foreach ($fields as $field_name) {
-    // Only support 'image' formatter for now
-    // @todo Support more.
-    // @todo When $context['view_mode'] == 'custom', $context['display'] has full settings
-    $instance = field_info_instance($entity_type, $field_name, $bundle);
-    $formatter = isset($instance['display'][$view_mode]) ? $instance['display'][$view_mode] : $instance['display']['default'];
-    if ($formatter['type'] == 'image') {
-      $content = isset($output[$field_name]) ? $output[$field_name] : NULL;
-      if (!empty($content)) {
-        $children = element_children($content);
-        foreach ($children as $key) {
-          $fid = $output[$field_name][$key]['#item']['fid'];
-          // The unique id for annotorious in order to support when image with the same image src.
-          //$data_original = $entity_type . '-' . $id . '-' . $vid . '-' . $field_name . '-' . $fid;
-          $data_original = $entity_type . '-' . $id . '-' . $field_name . '-' . $fid;
-          $output[$field_name][$key]['#item']['attributes'] = array(
-            'class' => array('annotorious-image'),
-            'data-original' => $data_original,
-          );
-          // @todo Really this way?
-          $output[$field_name][$key]['#attached']['libraries_load'][] = array('annotorious');
-        }
+  if (!empty($fields)) {
+    $processed[$entity_type][$bundle] = TRUE;
+    // Attach all Annotations of this entity
+    $annotations = annotorious_image_anno_load_all_annotations($entity_type, $entity);
+    // Fields data use field_name as index, src => data-original.
+    // It's designed in this way.
+    // Same image should not be attached to the same field twice, it's not supported.
+    $fields_data = array();
+    foreach ($fields as $field_name) {
+      $field_items = field_get_items($entity_type, $entity, $field_name, $langcode);
+      foreach ($field_items as $item) {
+        $data_original = $entity_type . '-' . $id . '-' . $field_name . '-' . $item['fid'];
+        $src = file_create_url($item['uri']);
+        $fields_data[$field_name][$src] = $data_original;
       }
     }
+
+    $settings = array(
+      'permission' => user_access('annotorious_image_edit'),
+      'fields' => $fields_data,
+      'annotations' => $annotations,
+    );
+    drupal_add_js(array('annotoriousImage' => $settings), 'setting');
+    libraries_load('annotorious');
   }
 }
