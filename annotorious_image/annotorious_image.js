@@ -1,32 +1,31 @@
-
 Drupal.annotoriousImage = Drupal.annotoriousImage || {};
 
-(function($) {
+(function ($) {
 
   Drupal.behaviors.annotoriousImage = {
     attach: function (context, settings) {
 
-      $.each(Drupal.settings.annotoriousImage.fields, function(field_name, data) {
+      $.each(Drupal.settings.annotoriousImage.fields, function (field_name, data) {
         // Turn '_' into '-'
-        $('.' + field_name.replace(/_/g, '-') + ' img').each(function(){
+        $('.' + field_name.replace(/_/g, '-') + ' img').each(function () {
           $(this).addClass('annotorious-image');
           $(this).attr('data-original', data[$(this).attr('src')]);
         });
       });
 
       // Make it annotatable, Use .on('load') to avoid issue on Chrome.
-      $('.annotorious-image').one('load', function() {
+      $('.annotorious-image').one('load', function () {
         var url = $(this).attr('data-original');
         anno.makeAnnotatable($(this)[0]);
         anno.hideSelectionWidget(url);
-      }).each(function() {
-        if(this.complete) $(this).load();
+      }).each(function () {
+        if (this.complete) $(this).load();
       });
 
       // Only do when the last got loaded.
-      $('.annotorious-image').last().one('load', function() {
+      $('.annotorious-image').last().one('load', function () {
         // Add annotations
-        $.each(Drupal.settings.annotoriousImage.annotations, function(i, val) {
+        $.each(Drupal.settings.annotoriousImage.annotations, function (i, val) {
           val.editable = false;
           anno.addAnnotation(val);
         });
@@ -34,27 +33,27 @@ Drupal.annotoriousImage = Drupal.annotoriousImage || {};
         if (Drupal.settings.annotoriousImage.permission) {
           $('.annotorious-annotationlayer').hover(Drupal.annotoriousImage.widgetHoverIn, Drupal.annotoriousImage.widgetHoverOut);
         }
-      }).each(function() {
-        if(this.complete) $(this).load();
+      }).each(function () {
+        if (this.complete) $(this).load();
       });
 
     }
   };
 
-  Drupal.annotoriousImage.widgetHoverIn = function(event) {
+  Drupal.annotoriousImage.widgetHoverIn = function (event) {
     $(this).append(Drupal.theme('annotoriousImageWidget'));
     $('.annotorious-image-widget a.save').on('click', Drupal.annotoriousImage.annoSave);
     $('.annotorious-image-widget a.edit').on('click', Drupal.annotoriousImage.annoEdit);
   };
 
-  Drupal.annotoriousImage.widgetHoverOut = function(event) {
+  Drupal.annotoriousImage.widgetHoverOut = function (event) {
     $(this).find('.annotorious-image-widget').remove();
   };
 
   /**
    * Save the annotorious image.
    */
-  Drupal.annotoriousImage.annoSave = function(event) {
+  Drupal.annotoriousImage.annoSave = function (event) {
     event.preventDefault();
     var image = $(this).closest('.annotorious-image-widget').siblings('.annotorious-image');
     var data = {
@@ -64,13 +63,13 @@ Drupal.annotoriousImage = Drupal.annotoriousImage || {};
     $.post('/annotorious-image/save', data);
   };
 
-  Drupal.annotoriousImage.annoEdit = function(event) {
+  Drupal.annotoriousImage.annoEdit = function (event) {
     event.preventDefault();
     var image = $(this).closest('.annotorious-image-widget').siblings('.annotorious-image');
     var url = image.attr('data-original');
     anno.showSelectionWidget(url);
     annotations = anno.getAnnotations(url);
-    $.each(annotations, function(i, val) {
+    $.each(annotations, function (i, val) {
       val.editable = true;
     });
   }
@@ -80,7 +79,7 @@ Drupal.annotoriousImage = Drupal.annotoriousImage || {};
 /**
  * Add tool widget to the image.
  */
-Drupal.theme.prototype.annotoriousImageWidget = function() {
+Drupal.theme.prototype.annotoriousImageWidget = function () {
   var widget = '<div class="annotorious-image-widget">';
   widget += '<ul>';
   widget += '<li><a class="edit" href="#">Edit</a></li> ';
