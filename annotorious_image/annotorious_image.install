@@ -62,7 +62,7 @@ function annotorious_image_schema() {
         'size' => 'tiny',
         'not null' => TRUE,
         'default' => 0,
-        'description' => 'A boolean indicating whether this data item has been deleted. Used to mass delete when delete the field, bundle, entity type.',
+        'description' => 'A boolean indicating whether this data item has been deleted.',
       ),
     ),
     //'primary key' => array('entity_type', 'entity_id', 'revision_id', 'field_name', 'fid'),
@@ -113,7 +113,7 @@ function annotorious_image_schema() {
       'url' => array(
         'description' => 'The data-original identity for the img tag.',
         'type' => 'varchar',
-        'length' => 2048,
+        'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -131,10 +131,11 @@ function annotorious_image_schema() {
       ),
       'shapes' => array(
         'description' => 'The serialized shapes.',
-        'type' => 'blob',
+        'type' => 'text',
         'size' => 'big',
         'serialize' => TRUE,
         'not null' => FALSE,
+        'object default' => array(),
       ),
       'deleted' => array(
         'description' => 'A boolean indicating whether this item has been deleted.',
@@ -148,7 +149,7 @@ function annotorious_image_schema() {
     'indexes' => array(
       'aid' => array('aid'),
       'uid' => array('uid'),
-      'url' => array('url'), // Consider adding this if need to query by it.
+      'url' => array('url'),
       'deleted' => array('deleted'),
     ),
     'foreign keys' => array(
