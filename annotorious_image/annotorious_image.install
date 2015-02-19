@@ -97,14 +97,14 @@ function annotorious_image_schema() {
         'not null' => TRUE,
       ),
       'aid' => array(
-        'description' => 'The file fid to match the correct field item.',
+        'description' => 'The reference aid.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => FALSE,
       ),
       /*
       'src' => array(
-        'description' => 'Annotation src property.',
+        'description' => 'A custom & detailed image src.',
         'type' => 'varchar',
         'length' => 2048,
         'not null' => FALSE,

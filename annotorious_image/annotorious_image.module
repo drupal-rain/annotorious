@@ -333,6 +333,7 @@ function annotorious_image_entity_view($entity, $entity_type, $view_mode, $langc
     // Fields data use field_name as index, src => data-original.
     // It's designed in this way.
     // Same image should not be attached to the same field twice, it's not supported.
+    // @todo Support image styles.
     $fields_data = array();
     foreach ($fields as $field_name) {
       $field_items = field_get_items($entity_type, $entity, $field_name, $langcode);
